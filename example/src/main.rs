@@ -16,8 +16,9 @@ fn main() -> io::Result<()> {
         io::stdin().read_line(&mut input)?;
 
         match eval.eval_str(&input) {
-            Ok(Some(result)) => println!("{}", result),
-            Ok(None) => {}
+            Ok(eval::EvalOutput::Val(result)) => println!("{}", result),
+            Ok(eval::EvalOutput::Lam) => println!("<lambda>"),
+            Ok(eval::EvalOutput::Dec) => println!("<declaration>"),
             Err(e) => eprintln!("Error: {}", e),
         }
     }
