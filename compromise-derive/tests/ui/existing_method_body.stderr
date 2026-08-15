@@ -1,0 +1,5 @@
+error: slop: methods in a `slop` impl must be declared without a body, using `;`
+ --> tests/ui/existing_method_body.rs:7:22
+  |
+7 |     fn implemented() {}
+  |                      ^^

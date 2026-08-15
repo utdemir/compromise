@@ -1,0 +1,5 @@
+error: `slop` functions must be declared without a body, using `;`
+ --> tests/ui/existing_function_body.rs:4:18
+  |
+4 | fn implemented() {}
+  |                  ^^

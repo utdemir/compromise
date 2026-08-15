@@ -1,0 +1,3 @@
+[workspace]
+members = ["example", "compromise", "compromise-derive"]
+resolver = "3"

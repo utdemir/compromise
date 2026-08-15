@@ -1,0 +1,8 @@
+error: slop: structs must be unit-style forward declarations, using `;`
+ --> tests/ui/fielded_struct.rs:4:16
+  |
+4 |   struct Example {
+  |  ________________^
+5 | |     value: usize,
+6 | | }
+  | |_^
