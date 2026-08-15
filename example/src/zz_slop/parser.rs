@@ -162,13 +162,9 @@ impl Parser {
 
     fn application(&mut self) -> Result<Expr, &'static str> {
         let mut expression = self.primary()?;
-        while matches!(self.peek(), Some(Token::LeftParen)) {
-            self.position += 1;
+        while self.consume(&Token::LeftParen) {
             let argument = self.expression()?;
-            if !matches!(self.peek(), Some(Token::RightParen)) {
-                return Err("syntax error");
-            }
-            self.position += 1;
+            self.expect(&Token::RightParen)?;
             expression = Expr::App(Box::new(expression), Box::new(argument));
         }
         Ok(expression)
@@ -182,10 +178,7 @@ impl Parser {
             Some(Token::Ident(name)) => Ok(Expr::Var(name)),
             Some(Token::LeftParen) => {
                 let expression = self.expression()?;
-                if !matches!(self.peek(), Some(Token::RightParen)) {
-                    return Err("syntax error");
-                }
-                self.position += 1;
+                self.expect(&Token::RightParen)?;
                 Ok(expression)
             }
             _ => Err("syntax error"),
@@ -194,5 +187,18 @@ impl Parser {
 
     fn peek(&self) -> Option<&Token> {
         self.tokens.get(self.position)
+    }
+
+    fn consume(&mut self, expected: &Token) -> bool {
+        if self.peek() == Some(expected) {
+            self.position += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn expect(&mut self, expected: &Token) -> Result<(), &'static str> {
+        self.consume(expected).then_some(()).ok_or("syntax error")
     }
 }
