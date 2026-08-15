@@ -64,4 +64,23 @@ mod tests {
         assert_eq!(eval.eval_str("z +"), err("syntax error"));
         assert_eq!(eval.eval_str("z + x"), val(30));
     }
+
+    #[test]
+    fn captures() {
+        let mut eval = Eval::new();
+        assert_eq!(eval.eval_str("x = 10"), dec());
+        assert_eq!(eval.eval_str("f = |i| x + i"), dec());
+        assert_eq!(eval.eval_str("f(5)"), val(15));
+        assert_eq!(eval.eval_str("x = 20"), dec());
+        assert_eq!(eval.eval_str("f(5)"), val(15));
+    }
+
+    #[test]
+    fn test_scoping() {
+        let mut eval = Eval::new();
+        assert_eq!(eval.eval_str("x = 10"), dec());
+        assert_eq!(eval.eval_str("f = |x| x + 1"), dec());
+        assert_eq!(eval.eval_str("f(5)"), val(6));
+        assert_eq!(eval.eval_str("x"), val(10));
+    }
 }
