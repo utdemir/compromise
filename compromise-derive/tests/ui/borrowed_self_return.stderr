@@ -1,0 +1,5 @@
+error: slop: return types containing borrowed `Self` are not supported
+ --> tests/ui/borrowed_self_return.rs:8:27
+  |
+8 |     fn borrowed(&self) -> &Self;
+  |                           ^^^^^

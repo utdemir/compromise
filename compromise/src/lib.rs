@@ -4,14 +4,29 @@ extern crate self as compromise;
 
 pub use compromise_derive::slop;
 
-/// Converts a value from its `zz_slop` representation.
+/// Defines a target-directed conversion across the facade/`zz_slop` boundary.
+///
+/// Implement this trait on the target type. The corresponding [`IntoSlop`]
+/// implementation on the source type is provided automatically.
 pub trait FromSlop<T> {
     fn from_slop(value: T) -> Self;
 }
 
 /// Converts a value into its `zz_slop` representation.
+///
+/// This is the ergonomic counterpart to [`FromSlop`] and is implemented
+/// automatically whenever the target implements `FromSlop<Self>`.
 pub trait IntoSlop<T> {
     fn into_slop(self) -> T;
+}
+
+impl<S, T> IntoSlop<T> for S
+where
+    T: FromSlop<S>,
+{
+    fn into_slop(self) -> T {
+        T::from_slop(self)
+    }
 }
 
 impl<S, T> FromSlop<Option<S>> for Option<T>
@@ -20,15 +35,6 @@ where
 {
     fn from_slop(value: Option<S>) -> Self {
         value.map(T::from_slop)
-    }
-}
-
-impl<S, T> IntoSlop<Option<T>> for Option<S>
-where
-    S: IntoSlop<T>,
-{
-    fn into_slop(self) -> Option<T> {
-        self.map(S::into_slop)
     }
 }
 
@@ -41,30 +47,12 @@ where
     }
 }
 
-impl<S, T, E> IntoSlop<Result<T, E>> for Result<S, E>
-where
-    S: IntoSlop<T>,
-{
-    fn into_slop(self) -> Result<T, E> {
-        self.map(S::into_slop)
-    }
-}
-
 impl<S, T> FromSlop<Vec<S>> for Vec<T>
 where
     T: FromSlop<S>,
 {
     fn from_slop(value: Vec<S>) -> Self {
         value.into_iter().map(T::from_slop).collect()
-    }
-}
-
-impl<S, T> IntoSlop<Vec<T>> for Vec<S>
-where
-    S: IntoSlop<T>,
-{
-    fn into_slop(self) -> Vec<T> {
-        self.into_iter().map(S::into_slop).collect()
     }
 }
 
@@ -77,11 +65,11 @@ where
     }
 }
 
-impl<S, T> IntoSlop<Box<T>> for Box<S>
+impl<S, T, const N: usize> FromSlop<[S; N]> for [T; N]
 where
-    S: IntoSlop<T>,
+    T: FromSlop<S>,
 {
-    fn into_slop(self) -> Box<T> {
-        Box::new(S::into_slop(*self))
+    fn from_slop(value: [S; N]) -> Self {
+        value.map(T::from_slop)
     }
 }

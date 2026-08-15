@@ -51,6 +51,16 @@ mod zz_slop {
         pub fn transform<T>(value: Option<Container<T>>) -> Option<Container<T>> {
             value
         }
+
+        pub fn array<T, const N: usize>(value: [Container<T>; N]) -> [Container<T>; N] {
+            value
+        }
+
+        pub fn nested_array<T, const N: usize>(
+            value: [Option<Box<Container<T>>>; N],
+        ) -> [Option<Box<Container<T>>>; N] {
+            value
+        }
     }
 }
 
@@ -87,6 +97,10 @@ mod nested {
         pub fn replace(&mut self, replacement: T);
         pub fn consume(self) -> T;
         pub fn nested(value: T) -> Option<Result<Vec<Box<Self>>, &'static str>>;
+        pub fn array<const N: usize>(value: [Self; N]) -> [Self; N];
+        pub fn nested_array<const N: usize>(
+            value: [Option<Box<Self>>; N],
+        ) -> [Option<Box<Self>>; N];
     }
 
     pub trait Example: Sized {
@@ -144,6 +158,27 @@ fn nested_self_returns_use_from_slop_recursively() {
 }
 
 #[test]
+fn arrays_convert_recursively_in_both_directions() {
+    let empty = nested::Container::<String>::array([]);
+    assert_eq!(empty, []);
+
+    let values = [
+        nested::Container::create("first".to_owned()),
+        nested::Container::create("second".to_owned()),
+    ];
+    let [first, second] = nested::Container::array(values);
+    assert_eq!(first.value(), "first");
+    assert_eq!(second.value(), "second");
+
+    let nested = nested::Container::nested_array([
+        Some(Box::new(nested::Container::create("value".to_owned()))),
+        None,
+    ]);
+    assert_eq!(nested[0].as_deref().unwrap().value(), "value");
+    assert!(nested[1].is_none());
+}
+
+#[test]
 fn trait_impl_converts_receivers_arguments_and_returns() {
     use nested::Example;
 
@@ -157,7 +192,14 @@ fn trait_impl_converts_receivers_arguments_and_returns() {
 
 #[test]
 fn generated_conversion_traits_expose_the_private_representation_safely() {
-    let public = nested::Container::from_slop(zz_slop::runtime::Container("value".to_owned()));
+    let mut public = nested::Container::from_slop(zz_slop::runtime::Container("value".to_owned()));
+
+    let inner_ref: &zz_slop::runtime::Container<String> = (&public).into_slop();
+    assert_eq!(inner_ref.0, "value");
+
+    let inner_mut: &mut zz_slop::runtime::Container<String> = (&mut public).into_slop();
+    inner_mut.0.push('!');
+
     let inner: zz_slop::runtime::Container<String> = public.into_slop();
-    assert_eq!(inner.0, "value");
+    assert_eq!(inner.0, "value!");
 }

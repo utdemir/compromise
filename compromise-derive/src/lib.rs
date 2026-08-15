@@ -79,7 +79,7 @@ fn source_module(input: &TokenStream) -> Result<Option<syn::Ident>> {
 }
 
 fn expand(input: TokenStream2, mode: ExpansionMode) -> Result<TokenStream2> {
-    if let Ok(function) = syn::parse2::<SlopFunction>(input.clone()) {
+    if let Ok(function) = syn::parse2::<SlopDeclaration>(input.clone()) {
         return function.expand(&mode);
     }
 
@@ -128,26 +128,23 @@ fn facade_path() -> Result<TokenStream2> {
     }
 }
 
-struct SlopFunction {
+struct SlopDeclaration {
     attrs: Vec<Attribute>,
     vis: Visibility,
     sig: Signature,
 }
 
-impl Parse for SlopFunction {
+impl Parse for SlopDeclaration {
     fn parse(input: ParseStream<'_>) -> Result<Self> {
         let attrs = input.call(Attribute::parse_outer)?;
         let vis = input.parse()?;
         let sig = input.parse()?;
         input.parse::<Token![;]>()?;
-        if !input.is_empty() {
-            return Err(input.error("unexpected tokens after function declaration"));
-        }
         Ok(Self { attrs, vis, sig })
     }
 }
 
-impl SlopFunction {
+impl SlopDeclaration {
     fn expand(self, mode: &ExpansionMode) -> Result<TokenStream2> {
         let Self { attrs, vis, sig } = self;
         let body = dispatch_body(&sig, mode, false)?;
@@ -207,27 +204,27 @@ fn expand_struct(item: ItemStruct, mode: &ExpansionMode) -> Result<TokenStream2>
             }
         }
 
-        impl #impl_generics #facade::IntoSlop<#backing::#ident #type_generics>
-            for #ident #type_generics #where_clause
+        impl #impl_generics #facade::FromSlop<#ident #type_generics>
+            for #backing::#ident #type_generics #where_clause
         {
-            fn into_slop(self) -> #backing::#ident #type_generics {
-                self.0
+            fn from_slop(value: #ident #type_generics) -> Self {
+                value.0
             }
         }
 
-        impl #ref_impl_generics #facade::IntoSlop<&#ref_lifetime #backing::#ident #type_generics>
-            for &#ref_lifetime #ident #type_generics #ref_where_clause
+        impl #ref_impl_generics #facade::FromSlop<&#ref_lifetime #ident #type_generics>
+            for &#ref_lifetime #backing::#ident #type_generics #ref_where_clause
         {
-            fn into_slop(self) -> &#ref_lifetime #backing::#ident #type_generics {
-                &self.0
+            fn from_slop(value: &#ref_lifetime #ident #type_generics) -> Self {
+                &value.0
             }
         }
 
-        impl #mut_ref_impl_generics #facade::IntoSlop<&#mut_ref_lifetime mut #backing::#ident #type_generics>
-            for &#mut_ref_lifetime mut #ident #type_generics #mut_ref_where_clause
+        impl #mut_ref_impl_generics #facade::FromSlop<&#mut_ref_lifetime mut #ident #type_generics>
+            for &#mut_ref_lifetime mut #backing::#ident #type_generics #mut_ref_where_clause
         {
-            fn into_slop(self) -> &#mut_ref_lifetime mut #backing::#ident #type_generics {
-                &mut self.0
+            fn from_slop(value: &#mut_ref_lifetime mut #ident #type_generics) -> Self {
+                &mut value.0
             }
         }
     })
@@ -311,7 +308,7 @@ impl Parse for ImplBody {
         let mut items = Vec::new();
         while !input.is_empty() {
             let fork = input.fork();
-            if let Ok(method) = fork.parse::<SlopMethod>() {
+            if let Ok(method) = fork.parse::<SlopDeclaration>() {
                 input.advance_to(&fork);
                 items.push(ImplItem::Fn(method.into_impl_item()));
                 continue;
@@ -330,23 +327,7 @@ impl Parse for ImplBody {
     }
 }
 
-struct SlopMethod {
-    attrs: Vec<Attribute>,
-    vis: Visibility,
-    sig: Signature,
-}
-
-impl Parse for SlopMethod {
-    fn parse(input: ParseStream<'_>) -> Result<Self> {
-        let attrs = input.call(Attribute::parse_outer)?;
-        let vis = input.parse()?;
-        let sig = input.parse()?;
-        input.parse::<Token![;]>()?;
-        Ok(Self { attrs, vis, sig })
-    }
-}
-
-impl SlopMethod {
+impl SlopDeclaration {
     fn into_impl_item(self) -> ImplItemFn {
         let Self { attrs, vis, sig } = self;
         ImplItemFn {
@@ -411,7 +392,7 @@ fn dispatch_body(sig: &Signature, mode: &ExpansionMode, method: bool) -> Result<
                     ));
                 }
                 let ident = &pattern.ident;
-                if type_contains_self(&argument.ty) {
+                if self_usage(&argument.ty).contains {
                     let facade = facade.as_ref();
                     args.push(quote!(#facade::IntoSlop::into_slop(#ident)));
                 } else {
@@ -424,17 +405,18 @@ fn dispatch_body(sig: &Signature, mode: &ExpansionMode, method: bool) -> Result<
     let return_contains_self = match &sig.output {
         ReturnType::Default => false,
         ReturnType::Type(_, ty) => {
-            if type_contains_borrowed_self(ty) {
+            let usage = self_usage(ty);
+            if usage.borrowed {
                 return Err(syn::Error::new_spanned(
                     ty,
                     "slop: return types containing borrowed `Self` are not supported",
                 ));
             }
-            type_contains_self(ty)
+            usage.contains
         }
     };
     let argument_conversion = sig.inputs.iter().any(|input| match input {
-        FnArg::Typed(argument) => type_contains_self(&argument.ty),
+        FnArg::Typed(argument) => self_usage(&argument.ty).contains,
         FnArg::Receiver(_) => false,
     });
     if sig.constness.is_some() && (return_contains_self || argument_conversion) {
@@ -501,62 +483,84 @@ fn panic_body(sig: &Signature) -> Block {
     }
 }
 
-fn type_contains_self(ty: &Type) -> bool {
-    match ty {
-        Type::Path(path) => path_contains_self(path),
-        Type::Reference(reference) => type_contains_self(&reference.elem),
-        Type::Array(array) => type_contains_self(&array.elem),
-        Type::Slice(slice) => type_contains_self(&slice.elem),
-        Type::Tuple(tuple) => tuple.elems.iter().any(type_contains_self),
-        Type::Paren(paren) => type_contains_self(&paren.elem),
-        Type::Group(group) => type_contains_self(&group.elem),
-        Type::Ptr(pointer) => type_contains_self(&pointer.elem),
-        _ => false,
+#[derive(Clone, Copy, Default)]
+struct SelfUsage {
+    contains: bool,
+    borrowed: bool,
+}
+
+impl SelfUsage {
+    fn merge(self, other: Self) -> Self {
+        Self {
+            contains: self.contains || other.contains,
+            borrowed: self.borrowed || other.borrowed,
+        }
     }
 }
 
-fn path_contains_self(path: &TypePath) -> bool {
+fn self_usage(ty: &Type) -> SelfUsage {
+    match ty {
+        Type::Path(path) => path_self_usage(path),
+        Type::Reference(reference) => {
+            let usage = self_usage(&reference.elem);
+            SelfUsage {
+                contains: usage.contains,
+                borrowed: usage.contains,
+            }
+        }
+        Type::Array(array) => self_usage(&array.elem),
+        Type::Slice(slice) => self_usage(&slice.elem),
+        Type::Tuple(tuple) => tuple
+            .elems
+            .iter()
+            .map(self_usage)
+            .fold(SelfUsage::default(), SelfUsage::merge),
+        Type::Paren(paren) => self_usage(&paren.elem),
+        Type::Group(group) => self_usage(&group.elem),
+        Type::Ptr(pointer) => self_usage(&pointer.elem),
+        _ => SelfUsage::default(),
+    }
+}
+
+fn path_self_usage(path: &TypePath) -> SelfUsage {
     if path.qself.is_none()
         && path.path.segments.len() == 1
         && path.path.segments[0].ident == "Self"
     {
-        return true;
+        return SelfUsage {
+            contains: true,
+            borrowed: false,
+        };
     }
-    path.path.segments.iter().any(|segment| match &segment.arguments {
-        PathArguments::AngleBracketed(arguments) => arguments.args.iter().any(|argument| match argument {
-            syn::GenericArgument::Type(ty) => type_contains_self(ty),
-            syn::GenericArgument::AssocType(assoc) => type_contains_self(&assoc.ty),
-            _ => false,
-        }),
-        PathArguments::Parenthesized(arguments) => {
-            arguments.inputs.iter().any(type_contains_self)
-                || matches!(&arguments.output, ReturnType::Type(_, ty) if type_contains_self(ty))
-        }
-        PathArguments::None => false,
-    })
-}
-
-fn type_contains_borrowed_self(ty: &Type) -> bool {
-    match ty {
-        Type::Reference(reference) => type_contains_self(&reference.elem),
-        Type::Path(path) => path.path.segments.iter().any(|segment| match &segment.arguments {
-            PathArguments::AngleBracketed(arguments) => arguments.args.iter().any(|argument| match argument {
-                syn::GenericArgument::Type(ty) => type_contains_borrowed_self(ty),
-                syn::GenericArgument::AssocType(assoc) => type_contains_borrowed_self(&assoc.ty),
-                _ => false,
-            }),
-            PathArguments::Parenthesized(arguments) => {
-                arguments.inputs.iter().any(type_contains_borrowed_self)
-                    || matches!(&arguments.output, ReturnType::Type(_, ty) if type_contains_borrowed_self(ty))
+    path.path
+        .segments
+        .iter()
+        .map(|segment| match &segment.arguments {
+            PathArguments::AngleBracketed(arguments) => {
+                arguments
+                    .args
+                    .iter()
+                    .fold(SelfUsage::default(), |usage, argument| {
+                        let argument_usage = match argument {
+                            syn::GenericArgument::Type(ty) => self_usage(ty),
+                            syn::GenericArgument::AssocType(assoc) => self_usage(&assoc.ty),
+                            _ => SelfUsage::default(),
+                        };
+                        usage.merge(argument_usage)
+                    })
             }
-            PathArguments::None => false,
-        }),
-        Type::Array(array) => type_contains_borrowed_self(&array.elem),
-        Type::Slice(slice) => type_contains_borrowed_self(&slice.elem),
-        Type::Tuple(tuple) => tuple.elems.iter().any(type_contains_borrowed_self),
-        Type::Paren(paren) => type_contains_borrowed_self(&paren.elem),
-        Type::Group(group) => type_contains_borrowed_self(&group.elem),
-        Type::Ptr(pointer) => type_contains_borrowed_self(&pointer.elem),
-        _ => false,
-    }
+            PathArguments::Parenthesized(arguments) => {
+                let inputs = arguments
+                    .inputs
+                    .iter()
+                    .map(self_usage)
+                    .fold(SelfUsage::default(), SelfUsage::merge);
+                match &arguments.output {
+                    ReturnType::Default => inputs,
+                    ReturnType::Type(_, ty) => inputs.merge(self_usage(ty)),
+                }
+            }
+            PathArguments::None => SelfUsage::default(),
+        })
+        .fold(SelfUsage::default(), SelfUsage::merge)
 }
