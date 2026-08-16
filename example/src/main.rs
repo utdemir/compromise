@@ -2,8 +2,8 @@ use std::io::{self, Write};
 
 mod zz_slop;
 
-mod parser;
 mod eval;
+mod parser;
 
 fn main() -> io::Result<()> {
     let mut eval = eval::Eval::new();

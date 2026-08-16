@@ -40,17 +40,77 @@ mod tests {
 
     case!(test_num, "42", Eval(Num(42)));
     case!(test_var, "x", Eval(Var("x".to_string())));
-    case!(test_add, "1 + 2", Eval(Add(Box::new(Num(1)), Box::new(Num(2)))));
-    case!(test_sub, "3 - 4", Eval(Sub(Box::new(Num(3)), Box::new(Num(4)))));
-    case!(test_div, "10 / 2", Eval(Div(Box::new(Num(10)), Box::new(Num(2)))));
-    case!(test_lam1, "|x| x + 1", Eval(Lam("x".to_string(), Box::new(Add(Box::new(Var("x".to_string())), Box::new(Num(1)))))));
-    case!(test_lam2, "|x, y| x + y", Eval(Lam("x".to_string(), Box::new(Lam("y".to_string(), Box::new(Add(Box::new(Var("x".to_string())), Box::new(Var("y".to_string())))))))));
-    case!(test_app, "(|x| x + 1)(5)", Eval(App(Box::new(Lam("x".to_string(), Box::new(Add(Box::new(Var("x".to_string())), Box::new(Num(1)))))), Box::new(Num(5)))));
+    case!(
+        test_add,
+        "1 + 2",
+        Eval(Add(Box::new(Num(1)), Box::new(Num(2))))
+    );
+    case!(
+        test_sub,
+        "3 - 4",
+        Eval(Sub(Box::new(Num(3)), Box::new(Num(4))))
+    );
+    case!(
+        test_div,
+        "10 / 2",
+        Eval(Div(Box::new(Num(10)), Box::new(Num(2))))
+    );
+    case!(
+        test_lam1,
+        "|x| x + 1",
+        Eval(Lam(
+            "x".to_string(),
+            Box::new(Add(Box::new(Var("x".to_string())), Box::new(Num(1))))
+        ))
+    );
+    case!(
+        test_lam2,
+        "|x, y| x + y",
+        Eval(Lam(
+            "x".to_string(),
+            Box::new(Lam(
+                "y".to_string(),
+                Box::new(Add(
+                    Box::new(Var("x".to_string())),
+                    Box::new(Var("y".to_string()))
+                ))
+            ))
+        ))
+    );
+    case!(
+        test_app,
+        "(|x| x + 1)(5)",
+        Eval(App(
+            Box::new(Lam(
+                "x".to_string(),
+                Box::new(Add(Box::new(Var("x".to_string())), Box::new(Num(1))))
+            )),
+            Box::new(Num(5))
+        ))
+    );
     case!(test_stmt, "x = 10", Let("x".to_string(), Num(10)));
 
-    case!(test_precedence, "1 + 2 * 3", Eval(Add(Box::new(Num(1)), Box::new(Mul(Box::new(Num(2)), Box::new(Num(3)))))));
-    case!(test_parentheses, "(1 + 2) * 3", Eval(Mul(Box::new(Add(Box::new(Num(1)), Box::new(Num(2)))), Box::new(Num(3)))));
-    case!(test_assignment, "x = 5 * 3", Let("x".to_string(), Mul(Box::new(Num(5)), Box::new(Num(3)))));
+    case!(
+        test_precedence,
+        "1 + 2 * 3",
+        Eval(Add(
+            Box::new(Num(1)),
+            Box::new(Mul(Box::new(Num(2)), Box::new(Num(3))))
+        ))
+    );
+    case!(
+        test_parentheses,
+        "(1 + 2) * 3",
+        Eval(Mul(
+            Box::new(Add(Box::new(Num(1)), Box::new(Num(2)))),
+            Box::new(Num(3))
+        ))
+    );
+    case!(
+        test_assignment,
+        "x = 5 * 3",
+        Let("x".to_string(), Mul(Box::new(Num(5)), Box::new(Num(3))))
+    );
 
     macro_rules! case_eq {
         ($name:ident, $lhs:expr, $rhs:expr) => {
