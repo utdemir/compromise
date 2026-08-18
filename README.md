@@ -38,6 +38,7 @@ See [./example](./example) for a sligthly more complex example.
 
 ## FAQ
 
+- **Is this library production-ready?**: I mean it's not "battle tested" per-se, but it's essentially a pretty dumb macro. You can use the technique without any library as well - just write your functions like `fn add(x: i32, y: i32) -> i32 { crate::zz_slop::add(x, y) }` - and that's what the macro does anyway with a few more conveniences.
 - **How to test side-effects?**: Ideally - only mark pure functions with #[slop]. So they can be easily tested. Use the techniques of your trade - functional core/imperative shell, sans-io, dependency injection, etc. all work just as fine. Ideally we would be writing this in a language that can express purity - but Rust ain't it.
 - **How to test for performance characteristics?**: I mean there should probably be a (deterministic) benchmark somewhere if performance characteristics matter - but I admit I don't have a good answer for this one.
 - **Do I need to read the `zz_slop` implementations?**: Rarely. If there is a bug, the solution would be to express it as a verification test and let LLM fix the implementation again. I do sometimes find it useful to vaguely read the shape of the `zz_slop` directory as it sometimes brings up some awkward semantics with the spec.
