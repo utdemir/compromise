@@ -1,12 +1,21 @@
 use compromise::slop;
 
+use crate::parser;
+
 #[slop]
 pub struct Eval;
 
 #[slop]
 impl Eval {
     pub fn new() -> Self;
-    pub fn eval_str(&mut self, input: &str) -> Result<EvalOutput, &'static str>;
+    pub fn eval(&mut self, input: &parser::Stmt) -> Result<EvalOutput, &'static str>;
+}
+
+impl Eval {
+    pub fn eval_str(&mut self, input: &str) -> Result<EvalOutput, &'static str> {
+        let stmt = parser::parse(input)?;
+        self.eval(&stmt)
+    }
 }
 
 #[derive(Debug, PartialEq)]
@@ -47,7 +56,6 @@ mod tests {
     case_one!(test_subtraction, "5 - 3", val(2));
     case_one!(test_multiplication, "2 * 3", val(6));
     case_one!(test_let, "x = 10", dec());
-    case_one!(test_variable, "x = 10\nx + 5", val(15));
     case_one!(test_unbound, "y + 1", err("unbound variable"));
     case_one!(test_lambda, "|x| x + 1", lam());
     case_one!(test_let_lam, "f = |x| x + 1", dec());

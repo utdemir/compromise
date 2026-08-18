@@ -19,34 +19,17 @@ pub fn new() -> Eval {
     }
 }
 
-pub fn eval_str(eval: &mut Eval, input: &str) -> Result<EvalOutput, &'static str> {
-    let mut result = EvalOutput::Dec;
-    let mut saw_statement = false;
-
-    for line in input.lines() {
-        if line.trim().is_empty() {
-            continue;
+pub fn eval(eval: &mut Eval, input: &Stmt) -> Result<EvalOutput, &'static str> {
+    match input {
+        Stmt::Let(name, expression) => {
+            let value = eval_expr(&eval.variables, expression)?;
+            eval.variables.insert(name.clone(), value);
+            Ok(EvalOutput::Dec)
         }
-        saw_statement = true;
-        match crate::zz_slop::parser::parse(line)? {
-            Stmt::Let(name, expression) => {
-                let value = eval_expr(&eval.variables, &expression)?;
-                eval.variables.insert(name, value);
-                result = EvalOutput::Dec;
-            }
-            Stmt::Eval(expression) => {
-                result = match eval_expr(&eval.variables, &expression)? {
-                    Value::Num(value) => EvalOutput::Val(value),
-                    Value::Closure(..) => EvalOutput::Lam,
-                };
-            }
-        }
-    }
-
-    if saw_statement {
-        Ok(result)
-    } else {
-        Err("syntax error")
+        Stmt::Eval(expression) => match eval_expr(&eval.variables, expression)? {
+            Value::Num(value) => Ok(EvalOutput::Val(value)),
+            Value::Closure(..) => Ok(EvalOutput::Lam),
+        },
     }
 }
 

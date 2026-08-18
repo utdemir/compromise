@@ -4,18 +4,10 @@ extern crate self as compromise;
 
 pub use compromise_derive::slop;
 
-/// Defines a target-directed conversion across the facade/`zz_slop` boundary.
-///
-/// Implement this trait on the target type. The corresponding [`IntoSlop`]
-/// implementation on the source type is provided automatically.
 pub trait FromSlop<T> {
     fn from_slop(value: T) -> Self;
 }
 
-/// Converts a value into its `zz_slop` representation.
-///
-/// This is the ergonomic counterpart to [`FromSlop`] and is implemented
-/// automatically whenever the target implements `FromSlop<Self>`.
 pub trait IntoSlop<T> {
     fn into_slop(self) -> T;
 }

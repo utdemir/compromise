@@ -14,7 +14,7 @@ panicking = []
 proc-macro2 = "1"
 proc-macro-crate = "3.5"
 quote = "1"
-syn = { version = "2", features = ["full"] }
+syn = { version = "2", features = ["full", "visit"] }
 
 [dev-dependencies]
 compromise = { path = "../compromise" }
