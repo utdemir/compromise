@@ -44,16 +44,22 @@ See [./example](./example) for a sligthly more complex example.
 - **Should I never use LLM's to edit files outside `zz_slop`?**: Not strictly. Merely means that if you _do_ - you should make sure to review them carefully - as you're adding technical debt a lot more compared to files under `zz_slop`. LLM's does tend to write terrible specs - so I suggest only using it for boilerplaty code.
 - **My editor sees a bunch of "undefined function" errors?**: See the "Editor support" section below.
 - **Why the name `zz_slop`?**: I wanted it to come last in file listings and GitHub PR review pane.
+- **But LLM's also destroy the environment/steal peoples work/spread misinformation/increase the class divide/deskill engineers/introduce massive security risks/lower the quality of products/...**. Yeah. If you can make your living without having to use them - you should. I don't think I can find a well-paying software job without having to see LLM generated code - so I'm trying to make _that part_ palatable.
 
 ## Agent configuration
 
 So far - simply using an AGENTS.md with something like:
 
 > When developing this example, you should only edit files under zz_slop/ directory. 
+>
 > The author has written specification for you to follow. Your task is to implement the files under the zz_slop directory so it passes the specification.
+>
 > Do not edit files outside zz_slop/ directory without explicit permission from the author.
+>
 > If the specification is unclear, inconsistent or has unnatural semantics (ie. causes implementation to be awkward), seek clarification from the author.
+>
 > If minor changes to the clarification would significantly improve the implementation, prompt the author with a suggestion - without making the change yourself.
+>
 > After your changes, leave the code in a typechecked and tests passing state (unless waiting for clarifications).
 
 worked for me. Someone with more appetite for configuring coding agents should probably come up with a hook/skill/mcp or whatever.
