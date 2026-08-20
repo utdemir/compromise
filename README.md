@@ -36,17 +36,6 @@ mod tests {
 
 See [./example](./example) for a sligthly more complex example.
 
-## FAQ
-
-- **Is this library production-ready?**: I mean it's not "battle tested" per-se, but it's essentially a pretty dumb macro. You can use the technique without any library as well - just write your functions like `fn add(x: i32, y: i32) -> i32 { crate::zz_slop::add(x, y) }` - and that's what the macro does anyway with a few more conveniences.
-- **How to test side-effects?**: Ideally - only mark pure functions with #[slop]. So they can be easily tested. Use the techniques of your trade - functional core/imperative shell, sans-io, dependency injection, etc. all work just as fine. Ideally we would be writing this in a language that can express purity - but Rust ain't it.
-- **How to test for performance characteristics?**: I mean there should probably be a (deterministic) benchmark somewhere if performance characteristics matter - but I admit I don't have a good answer for this one.
-- **Do I need to read the `zz_slop` implementations?**: Rarely. If there is a bug, the solution would be to express it as a verification test and let LLM fix the implementation again. I do sometimes find it useful to vaguely read the shape of the `zz_slop` directory as it sometimes brings up some awkward semantics with the spec.
-- **Should I never use LLM's to edit files outside `zz_slop`?**: Not strictly. Merely means that if you _do_ - you should make sure to review them carefully - as you're adding technical debt a lot more compared to files under `zz_slop`. LLM's does tend to write terrible specs - so I suggest only using it for boilerplaty code.
-- **My editor sees a bunch of "undefined function" errors?**: See the "Editor support" section below.
-- **Why the name `zz_slop`?**: I wanted it to come last in file listings and GitHub PR review pane.
-- **But LLM's also destroy the environment/steal peoples work/spread misinformation/increase the class divide/deskill engineers/introduce massive security risks/lower the quality of products/...**. Yeah. If you can make your living without having to use them - you should. I don't think I can find a well-paying software job without having to see LLM generated code - so I'm trying to make _that part_ palatable.
-
 ## Agent configuration
 
 So far - simply using an AGENTS.md with something like:
@@ -83,3 +72,14 @@ Add the equivalent of following to your editor configuration (below is for VsCod
   "rust-analyzer.cargo.features": ["panicking"]
 }
 ```
+
+## FAQ
+
+- **Is this library production-ready?**: I mean it's not "battle tested" per-se, but it's essentially a pretty dumb macro. You can use the technique without any library as well - just write your functions like `fn add(x: i32, y: i32) -> i32 { crate::zz_slop::add(x, y) }` - and that's what the macro does anyway with a few more conveniences.
+- **How to test side-effects?**: Ideally - only mark pure functions with #[slop]. So they can be easily tested. Use the techniques of your trade - functional core/imperative shell, sans-io, dependency injection, etc. all work just as fine. Ideally we would be writing this in a language that can express purity - but Rust ain't it.
+- **How to test for performance characteristics?**: I mean there should probably be a (deterministic) benchmark somewhere if performance characteristics matter - but I admit I don't have a good answer for this one.
+- **Do I need to read the `zz_slop` implementations?**: Rarely. If there is a bug, the solution would be to express it as a verification test and let LLM fix the implementation again. I do sometimes find it useful to vaguely read the shape of the `zz_slop` directory as it sometimes brings up some awkward semantics with the spec.
+- **Should I never use LLM's to edit files outside `zz_slop`?**: Not strictly. Merely means that if you _do_ - you should make sure to review them carefully - as you're adding technical debt a lot more compared to files under `zz_slop`. LLM's does tend to write terrible specs - so I suggest only using it for boilerplaty code.
+- **My editor sees a bunch of "undefined function" errors?**: See the "Editor support" section below.
+- **Why the name `zz_slop`?**: I wanted it to come last in file listings and GitHub PR review pane.
+- **But LLM's also destroy the environment/steal peoples work/spread misinformation/increase the class divide/deskill engineers/introduce massive security risks/lower the quality of products/...**. Yeah. If you can make your living without having to use them - you should. I don't think I can find a well-paying software job without having to see LLM generated code - so I'm trying to make _that part_ palatable.
